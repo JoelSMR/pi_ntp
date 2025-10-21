@@ -5,7 +5,7 @@ import plotly.express as px
 from datetime import datetime
 
 
-API_BASE_URL = "http://localhost:8080/api/products" 
+API_BASE_URL = "http://localhost:8080/api/v1/products" 
 
 st.set_page_config(
     page_title="Dashboard de Análisis de Productos (Pandas/Streamlit)",
@@ -23,7 +23,7 @@ def fetch_data_from_api(endpoint):
     try:
         # Petición GET a un endpoint específico
         response = requests.get(f"{API_BASE_URL}/{endpoint}")
-        response.raise_for_status() # Lanza una excepción si el estado es 4xx o 5xx
+        response.raise_for_status()
         data = response.json()
         
         # Convertir la lista de objetos JSON a DataFrame de Pandas
