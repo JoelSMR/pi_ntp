@@ -71,8 +71,8 @@ def get_simulated_data():
 
 # --- CÓDIGO PRINCIPAL DE LA APLICACIÓN ---
 
-# 1. Carga de datos (Usar la API o la simulación si la API falla)
-df_ventas = fetch_data_from_api("ventas_detalle") 
+# 1. Carga de datos (Usa la API o la simulación si la API falla)
+df_ventas = fetch_data_from_api(API_BASE_URL) 
 
 if df_ventas.empty:
     st.warning(" Usando datos simulados: Fallo al conectar con la API de Spring Boot.")
