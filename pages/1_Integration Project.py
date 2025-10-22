@@ -49,10 +49,10 @@ def get_simulated_data():
     data = {
         'id': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         'producto': ['Leche Entera', 'Queso Fresco', 'Avena', 'Arroz', 'Yogur', 
-                     'Mantequilla', 'Lentejas', 'Frijoles', 'Crema', 'Cebada'],
+                     'Mantequilla', 'Lentejas', 'Frijoles', 'Crema', 'Cebada','Quelos'],
         'categoria': ['Lácteos', 'Lácteos', 'Granos', 'Granos', 'Lácteos', 
-                      'Lácteos', 'Granos', 'Granos', 'Lácteos', 'Granos'],
-        'ingresos': [1200, 850, 400, 300, 750, 500, 250, 150, 600, 100],
+                      'Lácteos', 'Granos', 'Granos', 'Lácteos', 'Granos','Cereales'],
+        'ingresos': [1200, 850, 400, 300, 750, 500, 250, 150, 600, 100,200],
         # Fechas simuladas para análisis mensual
         'fecha': [
             datetime(2025, 9, 15), datetime(2025, 10, 5), datetime(2025, 10, 10), 
@@ -71,8 +71,8 @@ def get_simulated_data():
 
 # --- CÓDIGO PRINCIPAL DE LA APLICACIÓN ---
 
-# 1. Carga de datos (Usa la API o la simulación si la API falla)
-df_ventas = fetch_data_from_api(API_BASE_URL) 
+# 1. Carga de datos (Usar la API o la simulación si la API falla)
+df_ventas = fetch_data_from_api("ventas_detalle") 
 
 if df_ventas.empty:
     st.warning(" Usando datos simulados: Fallo al conectar con la API de Spring Boot.")
