@@ -5,6 +5,8 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "gitdb==4.0.12",
+    "gitpython==3.1.41",
     "google-api-python-client>=2.182.0",
     "google-auth-httplib2>=0.2.0",
     "google-auth-oauthlib>=1.2.2",
@@ -13,6 +15,7 @@ dependencies = [
     "pandas>=2.3.2",
     "plotly-express>=0.4.1",
     "python-dotenv>=1.1.1",
+    "setuptools==75.6.0",
+    "smmap==5.0.2",
     "streamlit>=1.49.1",
-    "ultralytics>=8.3.205",
 ]
