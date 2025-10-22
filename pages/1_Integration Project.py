@@ -4,57 +4,65 @@ import requests
 import plotly.express as px
 from datetime import datetime
 
+# --- 1. GLOBAL CONFIGURATION & API BASE URL ---
 
-API_BASE_URL = "http://localhost:8080/api/v1/products" 
+
+API_BASE_URL = "http://localhost:8080"
+SALES_ENDPOINT = "api/v1/products/sales_detail" # Placeholder for your specific sales endpoint
 
 st.set_page_config(
-    page_title="Dashboard de Análisis de Productos (Pandas/Streamlit)",
+    page_title="Product Data Analysis Dashboard (Pandas/Streamlit)",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# --- 2. FUNCIÓN DE CONEXIÓN A LA API Y CACHÉ ---
+# --- 2. API CONNECTION AND CACHING FUNCTION ---
 
-# st.cache_data almacena el resultado de la función. Si los argumentos no cambian,
-# no vuelve a llamar a la API.
-@st.cache_data(ttl=600) # ttl=600 significa que refrescará los datos cada 10 minutos
+# st.cache_data stores the function result. If arguments don't change,
+# it won't call the API again.
+@st.cache_data(ttl=600) # ttl=600 means data will refresh every 10 minutes
 def fetch_data_from_api(endpoint):
-    """Obtiene datos de la API de Spring Boot y los convierte a un DataFrame de Pandas."""
+    """Fetches data from the Spring Boot API and converts it to a Pandas DataFrame."""
+    full_url = f"{API_BASE_URL}/{endpoint}" # Correct URL construction
     try:
-        # Petición GET a un endpoint específico
-        response = requests.get(f"{API_BASE_URL}/{endpoint}")
-        response.raise_for_status()
+        # GET request to the specific endpoint
+        response = requests.get(full_url)
+        response.raise_for_status() # Raises an exception for 4xx or 5xx status codes
         data = response.json()
         
-        # Convertir la lista de objetos JSON a DataFrame de Pandas
+        # Convert the list of JSON objects to a Pandas DataFrame
         df = pd.DataFrame(data)
         
-        # Procesamiento de datos: Asegurar que 'ingresos' es numérico y 'fecha' es datetime
-        if 'ingresos' in df.columns:
-            df['ingresos'] = pd.to_numeric(df['ingresos'], errors='coerce')
-        if 'fecha' in df.columns:
-            df['fecha'] = pd.to_datetime(df['fecha'], errors='coerce') 
-            df['mes_nombre'] = df['fecha'].dt.strftime('%B') # Nombre del mes
-            df['año'] = df['fecha'].dt.year
+        # Data Processing: Ensure 'revenue' is numeric and 'date' is datetime
+        if 'ingresos' in df.columns: # Keep 'ingresos' if that's the column name from API
+            df['revenue'] = pd.to_numeric(df['ingresos'], errors='coerce')
+        if 'fecha' in df.columns: # Keep 'fecha' if that's the column name from API
+            df['date'] = pd.to_datetime(df['fecha'], errors='coerce') 
+            df['month_name'] = df['date'].dt.strftime('%B') # Month name
+            df['year'] = df['date'].dt.year
+            
+        # Select and rename columns for clarity in the rest of the script
+        if 'producto' in df.columns and 'categoria' in df.columns:
+             df = df.rename(columns={'producto': 'product', 'categoria': 'category'})
 
         return df
         
     except requests.exceptions.RequestException as e:
-        st.error(f"Error al conectar con la API ({API_BASE_URL}/{endpoint}): {e}")
-        return pd.DataFrame() # Retorna un DataFrame vacío en caso de error
+        st.error(f"❌ Error connecting to API ({full_url}): {e}")
+        return pd.DataFrame() # Returns an empty DataFrame on error
 
-# --- 3. SIMULACIÓN DE DATOS  ---
-# Esta función es para que puedas ejecutar la app si la API no está lista
+# --- 3. DATA SIMULATION FUNCTION ---
+# This function allows the app to run if the API is not ready
 def get_simulated_data():
     data = {
         'id': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-        'producto': ['Leche Entera', 'Queso Fresco', 'Avena', 'Arroz', 'Yogur', 
-                     'Mantequilla', 'Lentejas', 'Frijoles', 'Crema', 'Cebada','Quelos'],
-        'categoria': ['Lácteos', 'Lácteos', 'Granos', 'Granos', 'Lácteos', 
-                      'Lácteos', 'Granos', 'Granos', 'Lácteos', 'Granos','Cereales'],
-        'ingresos': [1200, 850, 400, 300, 750, 500, 250, 150, 600, 100,200],
-        # Fechas simuladas para análisis mensual
-        'fecha': [
+        'product': ['Whole Milk', 'Fresh Cheese', 'Oats', 'Rice', 'Yogurt', 
+                     'Butter', 'Lentils', 'Beans', 'Cream', 'Barley'],
+        'category': ['Dairy', 'Dairy', 'Grain', 'Grain', 'Dairy', 
+                      'Dairy', 'Grain', 'Grain', 'Dairy', 'Grain'],
+        'revenue': [1200, 850, 400, 300, 750, 500, 250, 150, 600, 100],
+        # Simulated dates for monthly analysis
+        'date': [
             datetime(2025, 9, 15), datetime(2025, 10, 5), datetime(2025, 10, 10), 
             datetime(2025, 9, 20), datetime(2025, 10, 1), datetime(2025, 9, 25), 
             datetime(2025, 10, 12), datetime(2025, 9, 28), datetime(2025, 10, 3), 
@@ -62,108 +70,112 @@ def get_simulated_data():
         ]
     }
     df = pd.DataFrame(data)
-    df['fecha'] = pd.to_datetime(df['fecha'])
-    df['mes_nombre'] = df['fecha'].dt.strftime('%B')
-    df['año'] = df['fecha'].dt.year
+    df['date'] = pd.to_datetime(df['date'])
+    df['month_name'] = df['date'].dt.strftime('%B')
+    df['year'] = df['date'].dt.year
     return df
-# --- FIN DE LA SIMULACIÓN ---
+# --- END OF SIMULATION ---
 
 
-# --- CÓDIGO PRINCIPAL DE LA APLICACIÓN ---
+# --- MAIN APPLICATION CODE ---
 
-# 1. Carga de datos (Usar la API o la simulación si la API falla)
-df_ventas = fetch_data_from_api("ventas_detalle") 
+# 1. Data Loading (Use API or simulation if API fails)
+df_sales = fetch_data_from_api(SALES_ENDPOINT) 
 
-if df_ventas.empty:
-    st.warning(" Usando datos simulados: Fallo al conectar con la API de Spring Boot.")
-    df_ventas = get_simulated_data()
-    # Si la data simulada también es vacía, no se puede continuar
-    if df_ventas.empty:
-        st.error("No se pudo cargar la información. Revisa la API o la simulación.")
+if df_sales.empty or 'revenue' not in df_sales.columns:
+    st.warning("⚠️ Using Simulated Data: Failed to connect or data structure is incorrect. ")
+    df_sales = get_simulated_data()
+    # If simulated data is also empty, stop execution
+    if df_sales.empty:
+        st.error("Could not load any data. Please check the API or the simulation.")
         st.stop()
 
 
-# 2. Sidebar con el Acordeón (st.expander) y Filtros
-st.sidebar.title(" Filtros de Análisis")
+# 2. Sidebar with Accordion (st.expander) and Filters
+st.sidebar.title("🛠️ Analysis Filters")
 
-with st.sidebar.expander("Filtros de Datos (Acordeón)", expanded=True):
-    # Filtro 1: Mes
-    meses_disponibles = sorted(df_ventas['mes_nombre'].unique(), key=lambda m: datetime.strptime(m, '%B'))
-    selected_mes = st.selectbox(
-        "Seleccionar Mes", 
-        options=meses_disponibles, 
-        index=len(meses_disponibles) - 1 
+with st.sidebar.expander("Data Filters (Accordion)", expanded=True):
+    # Filter 1: Month
+    try:
+        available_months = sorted(df_sales['month_name'].unique(), key=lambda m: datetime.strptime(m, '%B'))
+    except: # Fallback in case month names are not standard English
+         available_months = sorted(df_sales['month_name'].unique())
+         
+    selected_month = st.selectbox(
+        "Select Month", 
+        options=available_months, 
+        index=len(available_months) - 1 if available_months else 0 # Select the latest month
     )
 
-    # Filtro 2: Categoría de Productos
-    categorias_disponibles = sorted(df_ventas['categoria'].unique())
+    # Filter 2: Product Category
+    available_categories = sorted(df_sales['category'].unique())
     selected_categories = st.multiselect(
-        "Selecciona Categorías",
-        options=categorias_disponibles,
-        default=categorias_disponibles 
+        "Select Categories",
+        options=available_categories,
+        default=available_categories 
     )
 
-# 3. Aplicar Filtros
-df_filtrado = df_ventas[
-    (df_ventas['mes_nombre'] == selected_mes) & 
-    (df_ventas['categoria'].isin(selected_categories))
+# 3. Apply Filters
+df_filtered = df_sales[
+    (df_sales['month_name'] == selected_month) & 
+    (df_sales['category'].isin(selected_categories))
 ].copy() 
 
 
 # 4. HOME PAGE LAYOUT
-st.title(" Dashboard de Ingresos de Productos")
-st.markdown(f"**Datos basados en la conexión con Spring Boot API** | Mes de análisis: **{selected_mes}**")
+st.title("📈 Product Revenue Dashboard")
+st.markdown(f"**Data based on Spring Boot API connection** | Analysis Month: **{selected_month}**")
 
-st.divider() # Línea divisoria
+st.divider() # Divider line
 
 
-# --- 5. VISUALIZACIONES DINÁMICAS Y KPIs ---
+# --- 5. DYNAMIC VISUALIZATIONS AND KPIS ---
 
-if df_filtrado.empty:
-    st.warning("No hay datos para mostrar con los filtros aplicados. Ajusta tus selecciones.")
+if df_filtered.empty:
+    st.warning("No data to display with the applied filters. Adjust your selections.")
 else:
-    # KPI 1: Ingresos Totales
-    total_ingresos = df_filtrado['ingresos'].sum()
+    # KPI 1: Total Revenue
+    total_revenue = df_filtered['revenue'].sum()
     st.metric(
-        label="Ingresos Totales del Mes", 
-        value=f"${total_ingresos:,.2f}",
-        delta="Datos Reales de la API"
+        label="Total Monthly Revenue", 
+        value=f"${total_revenue:,.2f}",
+        delta="Real API Data"
     )
 
-    # Contenedor para los Gráficos de Análisis (uso de st.columns)
+    # Container for Analysis Charts (using st.columns)
     col1, col2 = st.columns(2)
 
-    # GRÁFICO 1: Ingresos por Categoría (para la comparativa Lácteos vs Granos)
+    # CHART 1: Revenue by Category 
     with col1:
-        st.subheader("Ingresos Totales por Categoría")
+        st.subheader("Total Revenue by Category")
         
-        # Agrupar y preparar datos para el gráfico
-        df_comparativa = df_filtrado.groupby('categoria')['ingresos'].sum().reset_index()
+        # Group and prepare data for the chart
+        df_comparison = df_filtered.groupby('category')['revenue'].sum().reset_index()
         
-        # Creación del Gráfico de Barras con Plotly
+        # Create Plotly Bar Chart
         fig_bar = px.bar(
-            df_comparativa,
-            x='categoria',
-            y='ingresos',
-            color='categoria', # Colorear por categoría para distinguirlas
-            title='Comparativa de Ingresos',
-            labels={'ingresos': 'Ingresos ($)', 'categoria': 'Categoría'},
+            df_comparison,
+            x='category',
+            y='revenue',
+            color='category', # Color by category to distinguish them
+            title='Revenue Comparison',
+            labels={'revenue': 'Revenue ($)', 'category': 'Category'},
             template='streamlit'
         )
         st.plotly_chart(fig_bar, use_container_width=True)
 
-    # GRÁFICO 2: Tendencia de Ingresos Diarios
+    # CHART 2: Daily Revenue Trend
     with col2:
-        st.subheader("Tendencia de Ingresos Diarios")
+        st.subheader("Daily Revenue Trend")
         
-        df_tendencia = df_filtrado.groupby('fecha')['ingresos'].sum().reset_index()
+        df_trend = df_filtered.groupby('date')['revenue'].sum().reset_index()
         
         fig_line = px.line(
-            df_tendencia,
-            x='fecha',
-            y='ingresos',
-            title='Ingresos Acumulados Diarios',
-            labels={'ingresos': 'Ingresos ($)', 'fecha': 'Fecha'},
+            df_trend,
+            x='date',
+            y='revenue',
+            title='Cumulative Daily Revenue',
+            labels={'revenue': 'Revenue ($)', 'date': 'Date'},
             template='streamlit'
         )
         st.plotly_chart(fig_line, use_container_width=True)
@@ -171,20 +183,20 @@ else:
 
     st.divider()
 
-    # --- 6. REPORTE DE TEXTO DINÁMICO (Análisis de Mayor Ingreso) ---
-    st.subheader("🔎 Conclusión del Análisis Mensual")
+    # --- 6. DYNAMIC TEXT REPORT (Highest Revenue Analysis) ---
+    st.subheader("🔎 Monthly Analysis Conclusion")
 
-    # Lógica para determinar el mayor ingreso 
-    if not df_comparativa.empty:
-        max_ingreso = df_comparativa['ingresos'].max()
-        categoria_max = df_comparativa[df_comparativa['ingresos'] == max_ingreso]['categoria'].iloc[0]
+    # Logic to determine the highest revenue 
+    if not df_comparison.empty:
+        max_revenue = df_comparison['revenue'].max()
+        max_category = df_comparison[df_comparison['revenue'] == max_revenue]['category'].iloc[0]
         
         st.success(
-            f"**¡Análisis Clave!** En **{selected_mes}**, la categoría con mayor reporte de ingresos fue **{categoria_max}** "
-            f"con un total de **${max_ingreso:,.2f}**. "
-            "Esto indica un foco importante de negocio en esta área."
+            f"**Key Insight!** In **{selected_month}**, the category with the highest reported revenue was **{max_category}** "
+            f"with a total of **${max_revenue:,.2f}**. "
+            "This indicates a significant business focus in this area."
         )
 
-        # Opcional: Mostrar la tabla completa
-        with st.expander("Ver Datos Crudos Filtrados"):
-            st.dataframe(df_filtrado, use_container_width=True)
+        # Optional: Show the complete table
+        with st.expander("View Filtered Raw Data"):
+            st.dataframe(df_filtered, use_container_width=True)
